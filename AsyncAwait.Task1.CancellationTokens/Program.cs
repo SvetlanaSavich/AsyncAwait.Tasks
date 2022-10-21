@@ -8,6 +8,7 @@
 */
 
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -47,6 +48,7 @@ internal class Program
 
         Console.WriteLine("Press any key to continue");
         Console.ReadLine();
+        previousCts?.Dispose();
     }
 
     private static void CalculateSum(int n)
@@ -55,20 +57,27 @@ internal class Program
         var token = currentCts.Token;
         // todo: make calculation asynchronous
 
-        var task = Task.Run(() => Calculator.Calculate(n, token)).ContinueWith((task) =>
-         {
-             Console.WriteLine($"Sum for {n} = {task.Result}.");
-             Console.WriteLine();
-             Console.WriteLine("Enter N: ");
-             previousCts = null;
-         });
+        Task.Run(async () =>
+        {
+
+            try
+            {
+                var result = await Calculator.CalculateAsync(n, token);
+                Console.WriteLine($"Sum for {n} = {result}.");
+                Console.WriteLine();
+                Console.WriteLine("Enter N: ");
+                previousCts = null;
+            }
+            catch (OperationCanceledException ex)
+            {
+                Debug.WriteLine("Ignore OperationCanceledException");
+            }
+        });
 
 
         // todo: add code to process cancellation and uncomment this line
-        if (previousCts != null)
-        {
-            previousCts.Cancel();
-        }
+
+        previousCts?.Cancel();
 
         token.Register(() => Console.WriteLine($"Sum for {n} cancelled..."));
 

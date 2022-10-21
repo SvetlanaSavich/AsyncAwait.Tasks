@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using AsyncAwait.Task2.CodeReviewChallenge.Headers;
@@ -23,20 +24,13 @@ public class StatisticMiddleware
     {
         string path = context.Request.Path;
 
-        var staticRegTask = Task.Run(
-            () => _statisticService.RegisterVisitAsync(path)
-                .ConfigureAwait(false)
-                .GetAwaiter().OnCompleted(UpdateHeaders));
-        Console.WriteLine(staticRegTask.Status); // just for debugging purposes
+        await _statisticService.RegisterVisitAsync(path)
+                .ConfigureAwait(false);
 
-        void UpdateHeaders()
-        {
-            context.Response.Headers.Add(
-                CustomHttpHeaders.TotalPageVisits,
-                _statisticService.GetVisitsCountAsync(path).GetAwaiter().GetResult().ToString());
-        }
+        var visitsGount = await _statisticService.GetVisitsCountAsync(path);
 
-        Thread.Sleep(3000); // without this the statistic counter does not work
+        context.Response.Headers.Add(CustomHttpHeaders.TotalPageVisits, visitsGount.ToString());
+
         await _next(context);
     }
 }
